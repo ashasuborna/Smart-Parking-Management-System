@@ -5,9 +5,14 @@
 smart_parking
 smart_parking.exe
 
-# Data files (optional - remove if you want to track them)
-parking_data.txt
-billing_history.txt
+# Data files (generated at runtime)
+data/receipts/*.txt
+data/active.csv
+data/history.csv
+!data/active.csv
+!data/history.csv
+!data/garages.csv
+!data/users.txt
 
 # Build directories
 build/
@@ -23,4 +28,9 @@ dist/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
+*~
 
