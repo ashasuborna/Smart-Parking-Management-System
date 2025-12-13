@@ -1,0 +1,31 @@
+========================================
+HOW TO PUSH TO GITHUB
+========================================
+
+STEP 1: Create Repository on GitHub
+----------------------------------
+1. Go to: https://github.com/new
+2. Repository name: Smart-Parking-Management-System
+3. Description: Smart Parking Management System - University Project
+4. Choose Public or Private
+5. DO NOT check "Initialize with README"
+6. Click "Create repository"
+
+STEP 2: Push Your Code
+----------------------
+After creating the repository, run in your terminal:
+
+git push -u origin master
+
+STEP 3: When Asked for Credentials
+-----------------------------------
+- Username: ashasuborna
+- Password: Paste your token:
+  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
+
+(Just paste the token when it asks for password)
+
+========================================
+IMPORTANT: The repository must exist on GitHub first!
+========================================
+
