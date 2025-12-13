@@ -1,4 +1,4 @@
 id,name,total_capacity,available_slots,hourly_rate_car,hourly_rate_bike
-1,Downtown Garage,50,48,5.00,2.00
-2,Mall Parking,100,99,4.00,1.50
-3,Office Complex,75,74,6.00,3.00
+1,Downtown Garage,50,50,5.00,2.00
+2,Mall Parking,100,100,4.00,1.50
+3,Office Complex,75,75,6.00,3.00
