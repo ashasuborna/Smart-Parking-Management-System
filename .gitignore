@@ -1,0 +1,26 @@
+# Compiled files
+*.o
+*.exe
+*.out
+smart_parking
+smart_parking.exe
+
+# Data files (optional - remove if you want to track them)
+parking_data.txt
+billing_history.txt
+
+# Build directories
+build/
+dist/
+
+# IDE files
+*.cbp
+*.depend
+*.layout
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
