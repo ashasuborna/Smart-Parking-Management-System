@@ -1,1 +1,5 @@
 car_number,vehicle_type,garage_id,duration_hours,entry_time,bill_amount
+321,Bike,2,1,2025-12-13 13:49:20,1.50
+2342223,Bike,1,1,2025-12-13 13:49:49,2.00
+45645645,Bike,1,1,2025-12-13 13:49:53,2.00
+28,Car,3,12,2025-12-13 14:14:34,72.00
