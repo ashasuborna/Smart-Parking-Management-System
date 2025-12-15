@@ -100,32 +100,97 @@ void on_login_clicked(GtkWidget *widget, gpointer data) {
     }
 }
 
+/**
+ * ============================================================================
+ * SUBORNA AKTER - UI Handler Functions
+ * ============================================================================
+ * These functions handle GUI button clicks for car entry/exit.
+ * They call your parking.c functions and sync with MySQL.
+ * ============================================================================
+ */
+
+/**
+ * Handle "Add Car" button click
+ * 
+ * @param widget Button widget (unused, required by GTK callback)
+ * @param data UIState pointer (contains app state and UI elements)
+ * 
+ * @details
+ * This is YOUR MAIN UI FUNCTION for car entry. It:
+ * 1. Gets user input from GUI (car number, vehicle type, garage, duration)
+ * 2. Calls YOUR add_car_entry() function from parking.c
+ * 3. Displays success/error messages
+ * 4. Saves to CSV file (your fileio.c function)
+ * 5. Syncs to MySQL if enabled (your db.c function)
+ * 6. Updates GUI displays
+ * 
+ * @flow
+ * User clicks "Add Car" button
+ *   → Get input from GUI fields
+ *   → Call add_car_entry() (YOUR FUNCTION in parking.c)
+ *   → If success:
+ *      → Save to CSV (save_active_cars - YOUR FUNCTION)
+ *      → Sync to MySQL (db_add_active_car - YOUR FUNCTION)
+ *      → Update GUI displays
+ *   → If error:
+ *      → Show error message
+ * 
+ * @note
+ * - This function is called automatically by GTK when button is clicked
+ * - You need to ensure MySQL sync works correctly here
+ * - File save happens automatically after successful entry
+ */
 void on_add_car_clicked(GtkWidget *widget, gpointer data) {
     (void)widget; // Suppress unused parameter warning
     UIState *ui = (UIState *)data;
+    
+    // ========================================================================
+    // STEP 1: GET USER INPUT FROM GUI
+    // ========================================================================
+    
+    // Get car number from text entry field
     const char *car_number = gtk_entry_get_text(GTK_ENTRY(ui->car_number_entry));
     
+    // Validate: car number must not be empty
     if (strlen(car_number) == 0) {
         ui_show_error(ui, "Please enter car number");
-        return;
+        return; // Stop here if invalid
     }
     
+    // Get garage selection from dropdown
     int garage_idx = gtk_combo_box_get_active(GTK_COMBO_BOX(ui->garage_combo));
     int garage_id = ui->app_state->garages[garage_idx].id;
+    
+    // Get vehicle type from dropdown (0=Car, 1=Bike)
     VehicleType vehicle_type = (VehicleType)gtk_combo_box_get_active(GTK_COMBO_BOX(ui->vehicle_combo));
+    
+    // Get duration from dropdown (0-11, add 1 to get 1-12 hours)
     int duration = gtk_combo_box_get_active(GTK_COMBO_BOX(ui->duration_combo)) + 1;
     
+    // ========================================================================
+    // STEP 2: CALL YOUR ADD_CAR_ENTRY FUNCTION
+    // ========================================================================
+    
+    // Call YOUR function from parking.c (does all validation and adds car)
     int result = add_car_entry(ui->app_state, car_number, vehicle_type, garage_id, duration);
     
+    // ========================================================================
+    // STEP 3: HANDLE RESULT (SUCCESS OR ERROR)
+    // ========================================================================
+    
     if (result == 0) {
+        // SUCCESS: Car added successfully
+        
+        // Show success message with bill amount
         char msg[200];
         float bill = calculate_bill(&ui->app_state->garages[garage_idx], vehicle_type, duration);
         snprintf(msg, sizeof(msg), "Car %s added! Bill: $%.2f", car_number, bill);
         ui_show_success(ui, msg);
         
+        // Clear car number entry field (ready for next entry)
         gtk_entry_set_text(GTK_ENTRY(ui->car_number_entry), "");
         
-        // Update garage combo
+        // Update garage dropdown (show updated availability)
         gtk_combo_box_text_remove_all(GTK_COMBO_BOX_TEXT(ui->garage_combo));
         for (int i = 0; i < ui->app_state->garage_count; i++) {
             char buffer[200];
@@ -136,32 +201,51 @@ void on_add_car_clicked(GtkWidget *widget, gpointer data) {
         }
         gtk_combo_box_set_active(GTK_COMBO_BOX(ui->garage_combo), 0);
         
-        ui_update_car_list(ui);
-        ui_update_garage_availability(ui);
+        // Update GUI displays (Samiun's functions)
+        ui_update_car_list(ui);              // Refresh car list table
+        ui_update_garage_availability(ui);  // Refresh availability display
+        
+        // ====================================================================
+        // STEP 4: SAVE TO CSV FILE (YOUR FUNCTION)
+        // ====================================================================
+        
+        // Save active cars to CSV file (your fileio.c function)
         save_active_cars(ui->app_state->active_cars, ui->app_state->active_count);
         
+        // ====================================================================
+        // STEP 5: SYNC TO MYSQL (YOUR FUNCTION - IF ENABLED)
+        // ====================================================================
+        
 #ifdef ENABLE_MYSQL
+        // Connect to MySQL
         MYSQL *conn = db_connect();
         if (conn) {
+            // Find the car we just added
             int idx = find_active_car(ui->app_state, car_number);
             if (idx >= 0) {
+                // Add to MySQL active table (your db.c function)
                 db_add_active_car(conn, &ui->app_state->active_cars[idx]);
             }
+            // Disconnect from MySQL
             db_disconnect(conn);
         }
 #endif
-    } else if (result == -1) {
-        ui_show_error(ui, "Invalid car number");
-    } else if (result == -2) {
-        ui_show_error(ui, "Invalid duration (1-12 hours)");
-    } else if (result == -3) {
-        ui_show_error(ui, "Maximum cars reached");
-    } else if (result == -4) {
-        ui_show_error(ui, "Car already parked");
-    } else if (result == -5) {
-        ui_show_error(ui, "Garage not found");
-    } else if (result == -6) {
-        ui_show_error(ui, "Garage is full");
+    } else {
+        // ERROR: Show appropriate error message based on error code
+        
+        if (result == -1) {
+            ui_show_error(ui, "Invalid car number");
+        } else if (result == -2) {
+            ui_show_error(ui, "Invalid duration (1-12 hours)");
+        } else if (result == -3) {
+            ui_show_error(ui, "Maximum cars reached");
+        } else if (result == -4) {
+            ui_show_error(ui, "Car already parked");
+        } else if (result == -5) {
+            ui_show_error(ui, "Garage not found");
+        } else if (result == -6) {
+            ui_show_error(ui, "Garage is full");
+        }
     }
 }
 
