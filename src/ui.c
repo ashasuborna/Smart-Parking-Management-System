@@ -249,26 +249,78 @@ void on_add_car_clicked(GtkWidget *widget, gpointer data) {
     }
 }
 
+/**
+ * Handle "Exit Car" button click
+ * 
+ * @param widget Button widget (unused, required by GTK callback)
+ * @param data UIState pointer (contains app state and UI elements)
+ * 
+ * @details
+ * This is YOUR MAIN UI FUNCTION for car exit. It:
+ * 1. Gets car number from GUI
+ * 2. Calls YOUR exit_car() function from parking.c
+ * 3. Displays success/error messages
+ * 4. Saves to CSV files (your fileio.c functions)
+ * 5. Syncs to MySQL if enabled (your db.c functions)
+ * 6. Updates GUI displays
+ * 
+ * @flow
+ * User clicks "Exit Car" button
+ *   → Get car number from GUI
+ *   → Call exit_car() (YOUR FUNCTION in parking.c)
+ *   → If success:
+ *      → Save active cars to CSV (save_active_cars - YOUR FUNCTION)
+ *      → Remove from MySQL active table (db_remove_active_car - YOUR FUNCTION)
+ *      → Add to MySQL history table (db_add_history_car - YOUR FUNCTION)
+ *      → Update GUI displays
+ *   → If error:
+ *      → Show error message
+ * 
+ * @note
+ * - This function is called automatically by GTK when button is clicked
+ * - exit_car() already calls append_history_car() to save history
+ * - You need to ensure MySQL sync works correctly here
+ */
 void on_exit_car_clicked(GtkWidget *widget, gpointer data) {
     (void)widget; // Suppress unused parameter warning
     UIState *ui = (UIState *)data;
+    
+    // ========================================================================
+    // STEP 1: GET USER INPUT FROM GUI
+    // ========================================================================
+    
+    // Get car number from text entry field
     const char *car_number = gtk_entry_get_text(GTK_ENTRY(ui->exit_car_entry));
     
+    // Validate: car number must not be empty
     if (strlen(car_number) == 0) {
         ui_show_error(ui, "Please enter car number");
-        return;
+        return; // Stop here if invalid
     }
     
+    // ========================================================================
+    // STEP 2: CALL YOUR EXIT_CAR FUNCTION
+    // ========================================================================
+    
+    // Call YOUR function from parking.c (does all processing and exits car)
     int result = exit_car(ui->app_state, car_number);
     
+    // ========================================================================
+    // STEP 3: HANDLE RESULT (SUCCESS OR ERROR)
+    // ========================================================================
+    
     if (result == 0) {
+        // SUCCESS: Car exited successfully
+        
+        // Show success message
         char msg[200];
         snprintf(msg, sizeof(msg), "Car %s exited successfully", car_number);
         ui_show_success(ui, msg);
         
+        // Clear exit car entry field (ready for next exit)
         gtk_entry_set_text(GTK_ENTRY(ui->exit_car_entry), "");
         
-        // Update garage combo
+        // Update garage dropdown (show updated availability)
         gtk_combo_box_text_remove_all(GTK_COMBO_BOX_TEXT(ui->garage_combo));
         for (int i = 0; i < ui->app_state->garage_count; i++) {
             char buffer[200];
@@ -279,23 +331,43 @@ void on_exit_car_clicked(GtkWidget *widget, gpointer data) {
         }
         gtk_combo_box_set_active(GTK_COMBO_BOX(ui->garage_combo), 0);
         
-        ui_update_car_list(ui);
-        ui_update_garage_availability(ui);
-        ui_update_revenue(ui);
+        // Update GUI displays (Samiun's functions)
+        ui_update_car_list(ui);              // Refresh car list (car removed)
+        ui_update_garage_availability(ui);   // Refresh availability (slot freed)
+        ui_update_revenue(ui);                // Refresh revenue (bill added)
+        
+        // ====================================================================
+        // STEP 4: SAVE TO CSV FILE (YOUR FUNCTION)
+        // ====================================================================
+        
+        // Save updated active cars list to CSV (your fileio.c function)
+        // Note: exit_car() already called append_history_car() to save history
         save_active_cars(ui->app_state->active_cars, ui->app_state->active_count);
         
+        // ====================================================================
+        // STEP 5: SYNC TO MYSQL (YOUR FUNCTIONS - IF ENABLED)
+        // ====================================================================
+        
 #ifdef ENABLE_MYSQL
+        // Connect to MySQL
         MYSQL *conn = db_connect();
         if (conn) {
+            // Step 5a: Remove car from MySQL active table (your db.c function)
             db_remove_active_car(conn, car_number);
+            
+            // Step 5b: Get the last history record (car was just added to history)
             int idx = ui->app_state->history_count - 1;
             if (idx >= 0) {
+                // Add to MySQL history table (your db.c function)
                 db_add_history_car(conn, &ui->app_state->history_cars[idx]);
             }
+            
+            // Disconnect from MySQL
             db_disconnect(conn);
         }
 #endif
     } else {
+        // ERROR: Car not found
         ui_show_error(ui, "Car not found in active list");
     }
 }
