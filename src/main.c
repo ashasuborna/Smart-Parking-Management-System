@@ -51,9 +51,9 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
     }
 #endif
     
-    // Initialize UI
+    // Initialize UI - Show dashboard directly (no login for Suborna's presentation)
     ui_init(&ui_state, &app_state, app);
-    ui_show_login(&ui_state);
+    ui_show_dashboard(&ui_state);
 }
 
 static void on_shutdown(GtkApplication *app, gpointer user_data) {
