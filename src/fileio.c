@@ -106,41 +106,7 @@ time_t parse_timestamp(const char *str) {
     return time(NULL);
 }
 
-int load_users(User *users, int *count) {
-    FILE *fp = fopen(USERS_FILE, "r");
-    if (!fp) {
-        *count = 0;
-        return 0;
-    }
-    
-    *count = 0;
-    char line[200];
-    while (fgets(line, sizeof(line), fp) && *count < 100) {
-        char username[MAX_USERNAME_LEN];
-        char password[MAX_PASSWORD_LEN];
-        char role_str[10];
-        
-        if (sscanf(line, "%49[^:]:%49[^:]:%9s", username, password, role_str) == 3) {
-            strncpy(users[*count].username, username, MAX_USERNAME_LEN - 1);
-            strncpy(users[*count].password, password, MAX_PASSWORD_LEN - 1);
-            users[*count].role = (strcmp(role_str, "admin") == 0) ? ROLE_ADMIN : ROLE_USER;
-            (*count)++;
-        }
-    }
-    
-    fclose(fp);
-    return 1;
-}
-
-int save_user(const User *user) {
-    ensure_data_directory();
-    FILE *fp = fopen(USERS_FILE, "a");
-    if (!fp) return 0;
-    
-    fprintf(fp, "%s:%s:%s\n", user->username, user->password, role_to_string(user->role));
-    fclose(fp);
-    return 1;
-}
+// REMOVED: load_users() and save_user() - not part of Suborna's tasks (authentication removed)
 
 /**
  * Load active cars from CSV file

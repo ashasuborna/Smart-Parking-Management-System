@@ -17,7 +17,6 @@ SRCDIR = src
 SOURCES = $(SRCDIR)/main.c \
           $(SRCDIR)/models.c \
           $(SRCDIR)/fileio.c \
-          $(SRCDIR)/auth.c \
           $(SRCDIR)/billing.c \
           $(SRCDIR)/parking.c \
           $(SRCDIR)/ui.c

@@ -1,4 +1,0 @@
-admin:admin123:admin
-user1:user123:user
-user2:user123:user
-
