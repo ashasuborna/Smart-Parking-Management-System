@@ -4,15 +4,13 @@
 #include "models.h"
 
 #define DATA_DIR "data"
-#define USERS_FILE "data/users.txt"
 #define ACTIVE_FILE "data/active.csv"
 #define HISTORY_FILE "data/history.csv"
 #define GARAGES_FILE "data/garages.csv"
 #define RECEIPTS_DIR "data/receipts"
 
-// File I/O functions
-int load_users(User *users, int *count);
-int save_user(const User *user);
+// File I/O functions - Suborna's tasks only
+// REMOVED: load_users() and save_user() - not part of Suborna's tasks
 int load_active_cars(ParkingActive *cars, int *count);
 int save_active_cars(const ParkingActive *cars, int count);
 int load_history_cars(ParkingHistory *cars, int *count);

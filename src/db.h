@@ -134,27 +134,9 @@ int db_remove_active_car(MYSQL *conn, const char *car_number);
 int db_add_history_car(MYSQL *conn, const ParkingHistory *car);
 
 // ============================================================================
-// USER OPERATIONS (Optional - for future use)
+// USER OPERATIONS - REMOVED (not part of Suborna's tasks)
 // ============================================================================
-
-/**
- * Load users from MySQL database
- * 
- * @param conn MySQL connection handle
- * @param users Array to store loaded users
- * @param count Pointer to store number of users loaded
- * @return 1 on success, 0 on failure
- */
-int db_load_users(MYSQL *conn, User *users, int *count);
-
-/**
- * Save user to MySQL database
- * 
- * @param conn MySQL connection handle
- * @param user Pointer to User structure
- * @return 1 on success, 0 on failure
- */
-int db_save_user(MYSQL *conn, const User *user);
+// db_load_users() and db_save_user() removed - authentication not needed
 
 #endif // ENABLE_MYSQL
 
