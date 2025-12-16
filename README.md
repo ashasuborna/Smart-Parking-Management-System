@@ -24,5 +24,5 @@ make
 make ENABLE_MYSQL=1
 ```
 
-## Branch: suborna-presentation
-This branch contains only Suborna's tasks for presentation.
+## Branch: add-exit-car-file-handling-by-suborna
+This branch contains Suborna's tasks: Car Entry/Exit, File Handling, MySQL Integration.
