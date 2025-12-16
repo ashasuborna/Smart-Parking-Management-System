@@ -1,5 +1,5 @@
-#ifndef PARKING_H
-#define PARKING_H
+#ifndef CAR_ENTRY_EXIT_H
+#define CAR_ENTRY_EXIT_H
 
 #include "models.h"
 
@@ -12,5 +12,5 @@ int is_car_number_valid(const char *car_number);
 void initialize_default_garages(Garage *garages, int *count);
 void update_garage_availability(Garage *garages, int garage_count, int garage_id, int change);
 
-#endif // PARKING_H
+#endif // CAR_ENTRY_EXIT_H
 

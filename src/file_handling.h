@@ -1,5 +1,5 @@
-#ifndef FILEIO_H
-#define FILEIO_H
+#ifndef FILE_HANDLING_H
+#define FILE_HANDLING_H
 
 #include "models.h"
 
@@ -25,5 +25,5 @@ void ensure_data_directory(void);
 char* format_timestamp(time_t t, char *buffer, size_t size);
 time_t parse_timestamp(const char *str);
 
-#endif // FILEIO_H
+#endif // FILE_HANDLING_H
 

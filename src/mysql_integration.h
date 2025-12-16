@@ -1,5 +1,5 @@
-#ifndef DB_H
-#define DB_H
+#ifndef MYSQL_INTEGRATION_H
+#define MYSQL_INTEGRATION_H
 
 #ifdef ENABLE_MYSQL
 
@@ -140,5 +140,5 @@ int db_add_history_car(MYSQL *conn, const ParkingHistory *car);
 
 #endif // ENABLE_MYSQL
 
-#endif // DB_H
+#endif // MYSQL_INTEGRATION_H
 

@@ -1,13 +1,13 @@
 #include "ui.h"
-#include "parking.h"
-#include "fileio.h"
+#include "car_entry_exit.h"
+#include "file_handling.h"
 #include "billing.h"
 // Removed auth.h - no login for Suborna's presentation
 #include <string.h>
 #include <stdio.h>
 
 #ifdef ENABLE_MYSQL
-#include "db.h"
+#include "mysql_integration.h"
 #endif
 
 static UIState *g_ui_state = NULL;

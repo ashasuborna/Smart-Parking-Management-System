@@ -1,6 +1,6 @@
 #ifdef ENABLE_MYSQL
 
-#include "db.h"
+#include "mysql_integration.h"
 #include <stdio.h>
 #include <string.h>
 
