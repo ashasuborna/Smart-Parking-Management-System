@@ -598,8 +598,7 @@ void ui_init(UIState *ui, AppState *app_state, GtkApplication *app) {
     memset(ui, 0, sizeof(UIState));
     ui->app_state = app_state;
     ui->app = app;
-    ui->sort_column = 0;
-    ui->sort_order = 0;
+    // REMOVED: sort_column and sort_order - not part of Suborna's tasks
     g_ui_state = ui;
 }
 
