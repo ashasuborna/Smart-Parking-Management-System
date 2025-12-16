@@ -58,8 +58,10 @@
 - **Exit Car**: Enter car number, click "Exit Car" - system removes car, generates receipt, updates garage slots
 
 #### Files:
-- `src/parking.c` - Entry/exit logic (`add_car_entry()`, `exit_car()`)
+- `src/car_entry_exit.c` - Entry/exit logic (`add_car_entry()`, `exit_car()`)
+- `src/car_entry_exit.h` - Function declarations
 - `src/ui.c` - GUI handlers (`on_add_car_clicked()`, `on_exit_car_clicked()`)
+- `src/billing.c` - Bill calculation (used by car entry)
 
 ---
 
@@ -72,12 +74,13 @@
 - **Manual Load**: Click "Load" button to reload data from files
 
 #### Files:
-- `src/fileio.c` - All file operations
+- `src/file_handling.c` - All file operations
   - `load_active_cars()` - Loads from `data/active.csv`
   - `save_active_cars()` - Saves to CSV
   - `load_history_cars()` - Loads from `data/history.csv`
   - `append_history_car()` - Appends to history
   - `load_garages()` / `save_garages()` - Garage file operations
+- `src/file_handling.h` - Function declarations
 
 #### Data Files:
 - `data/active.csv` - Currently parked cars
@@ -95,18 +98,19 @@
 - **Fallback**: If MySQL unavailable, works with file storage only
 
 #### Files:
-- `src/db.c` - MySQL operations
+- `src/mysql_integration.c` - MySQL operations
   - `db_connect()` - Connect to database
   - `db_init_tables()` - Create tables
   - `db_add_active_car()` - Add car to MySQL
   - `db_remove_active_car()` - Remove from MySQL
   - `db_add_history_car()` - Add to history in MySQL
+- `src/mysql_integration.h` - Function declarations
 - `schema.sql` - Database schema
 
 #### Enable MySQL:
 1. Install MySQL Server
 2. Create database: `CREATE DATABASE smart_parking;`
-3. Update connection in `src/db.c` (host, user, password)
+3. Update connection in `src/mysql_integration.c` (host, user, password)
 4. Build with: `make ENABLE_MYSQL=1`
 
 ---
@@ -120,7 +124,7 @@
 - **Cleanup**: Removes old backups to save space
 
 #### Files:
-- `src/fileio.c` - Backup functions (to be implemented)
+- `src/file_handling.c` - Backup functions (to be implemented)
   - `create_backup()` - Create backup
   - `restore_backup()` - Restore from backup
   - `cleanup_old_backups()` - Remove old backups
@@ -133,22 +137,22 @@
 ## 📁 Files for Each Feature
 
 ### Car Entry/Exit:
-- `src/parking.c` / `src/parking.h`
+- `src/car_entry_exit.c` / `src/car_entry_exit.h`
 - `src/ui.c` (handlers: `on_add_car_clicked`, `on_exit_car_clicked`)
-- `src/billing.c` (bill calculation)
+- `src/billing.c` / `src/billing.h` (bill calculation - needed for car entry)
 
 ### File Handling:
-- `src/fileio.c` / `src/fileio.h`
+- `src/file_handling.c` / `src/file_handling.h`
 - `data/active.csv`
 - `data/history.csv`
 - `data/garages.csv`
 
 ### MySQL Integration:
-- `src/db.c` / `src/db.h`
+- `src/mysql_integration.c` / `src/mysql_integration.h`
 - `schema.sql`
 
 ### Data Backup:
-- `src/fileio.c` (backup functions - to be implemented)
+- `src/file_handling.c` (backup functions - to be implemented)
 
 ---
 
