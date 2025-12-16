@@ -1,7 +1,6 @@
 #include "ui.h"
 #include "car_entry_exit.h"
 #include "file_handling.h"
-// Removed auth.h - no login for Suborna's presentation
 #include <string.h>
 #include <stdio.h>
 
@@ -50,13 +49,8 @@ void ui_update_garage_availability(UIState *ui) {
 }
 
 void ui_update_car_list(UIState *ui) {
-    // Clear existing
     gtk_list_store_clear(ui->car_list_store);
     
-    // REMOVED: Search functionality - not part of Suborna's tasks
-    // Display all active cars (no filtering)
-    
-    // Add cars
     for (int i = 0; i < ui->app_state->active_count; i++) {
         char entry_time_str[50];
         format_timestamp(ui->app_state->active_cars[i].entry_time, entry_time_str, sizeof(entry_time_str));
@@ -74,100 +68,31 @@ void ui_update_car_list(UIState *ui) {
     }
 }
 
-// REMOVED: Login functionality - not part of Suborna's tasks
-// Login screen removed for presentation branch
-
-/**
- * ============================================================================
- * SUBORNA AKTER - UI Handler Functions
- * ============================================================================
- * These functions handle GUI button clicks for car entry/exit.
- * They call your parking.c functions and sync with MySQL.
- * ============================================================================
- */
-
-/**
- * Handle "Add Car" button click
- * 
- * @param widget Button widget (unused, required by GTK callback)
- * @param data UIState pointer (contains app state and UI elements)
- * 
- * @details
- * This is YOUR MAIN UI FUNCTION for car entry. It:
- * 1. Gets user input from GUI (car number, vehicle type, garage, duration)
- * 2. Calls YOUR add_car_entry() function from parking.c
- * 3. Displays success/error messages
- * 4. Saves to CSV file (your fileio.c function)
- * 5. Syncs to MySQL if enabled (your db.c function)
- * 6. Updates GUI displays
- * 
- * @flow
- * User clicks "Add Car" button
- *   → Get input from GUI fields
- *   → Call add_car_entry() (YOUR FUNCTION in parking.c)
- *   → If success:
- *      → Save to CSV (save_active_cars - YOUR FUNCTION)
- *      → Sync to MySQL (db_add_active_car - YOUR FUNCTION)
- *      → Update GUI displays
- *   → If error:
- *      → Show error message
- * 
- * @note
- * - This function is called automatically by GTK when button is clicked
- * - You need to ensure MySQL sync works correctly here
- * - File save happens automatically after successful entry
- */
 void on_add_car_clicked(GtkWidget *widget, gpointer data) {
-    (void)widget; // Suppress unused parameter warning
+    (void)widget;
     UIState *ui = (UIState *)data;
     
-    // ========================================================================
-    // STEP 1: GET USER INPUT FROM GUI
-    // ========================================================================
-    
-    // Get car number from text entry field
     const char *car_number = gtk_entry_get_text(GTK_ENTRY(ui->car_number_entry));
-    
-    // Validate: car number must not be empty
     if (strlen(car_number) == 0) {
         ui_show_error(ui, "Please enter car number");
-        return; // Stop here if invalid
+        return;
     }
     
-    // Get garage selection from dropdown
     int garage_idx = gtk_combo_box_get_active(GTK_COMBO_BOX(ui->garage_combo));
     int garage_id = ui->app_state->garages[garage_idx].id;
-    
-    // Get vehicle type from dropdown (0=Car, 1=Bike)
     VehicleType vehicle_type = (VehicleType)gtk_combo_box_get_active(GTK_COMBO_BOX(ui->vehicle_combo));
-    
-    // Get duration from dropdown (0-11, add 1 to get 1-12 hours)
     int duration = gtk_combo_box_get_active(GTK_COMBO_BOX(ui->duration_combo)) + 1;
     
-    // ========================================================================
-    // STEP 2: CALL YOUR ADD_CAR_ENTRY FUNCTION
-    // ========================================================================
-    
-    // Call YOUR function from parking.c (does all validation and adds car)
     int result = add_car_entry(ui->app_state, car_number, vehicle_type, garage_id, duration);
     
-    // ========================================================================
-    // STEP 3: HANDLE RESULT (SUCCESS OR ERROR)
-    // ========================================================================
-    
     if (result == 0) {
-        // SUCCESS: Car added successfully
-        
-        // Show success message with bill amount
         char msg[200];
         float bill = calculate_bill(&ui->app_state->garages[garage_idx], vehicle_type, duration);
         snprintf(msg, sizeof(msg), "Car %s added! Bill: $%.2f", car_number, bill);
         ui_show_success(ui, msg);
         
-        // Clear car number entry field (ready for next entry)
         gtk_entry_set_text(GTK_ENTRY(ui->car_number_entry), "");
         
-        // Update garage dropdown (show updated availability)
         gtk_combo_box_text_remove_all(GTK_COMBO_BOX_TEXT(ui->garage_combo));
         for (int i = 0; i < ui->app_state->garage_count; i++) {
             char buffer[200];
@@ -178,38 +103,22 @@ void on_add_car_clicked(GtkWidget *widget, gpointer data) {
         }
         gtk_combo_box_set_active(GTK_COMBO_BOX(ui->garage_combo), 0);
         
-        // Update GUI displays (Samiun's functions)
-        ui_update_car_list(ui);              // Refresh car list table
-        ui_update_garage_availability(ui);  // Refresh availability display
+        ui_update_car_list(ui);
+        ui_update_garage_availability(ui);
         
-        // ====================================================================
-        // STEP 4: SAVE TO CSV FILE (YOUR FUNCTION)
-        // ====================================================================
-        
-        // Save active cars to CSV file (your fileio.c function)
         save_active_cars(ui->app_state->active_cars, ui->app_state->active_count);
         
-        // ====================================================================
-        // STEP 5: SYNC TO MYSQL (YOUR FUNCTION - IF ENABLED)
-        // ====================================================================
-        
 #ifdef ENABLE_MYSQL
-        // Connect to MySQL
         MYSQL *conn = db_connect();
         if (conn) {
-            // Find the car we just added
             int idx = find_active_car(ui->app_state, car_number);
             if (idx >= 0) {
-                // Add to MySQL active table (your db.c function)
                 db_add_active_car(conn, &ui->app_state->active_cars[idx]);
             }
-            // Disconnect from MySQL
             db_disconnect(conn);
         }
 #endif
     } else {
-        // ERROR: Show appropriate error message based on error code
-        
         if (result == -1) {
             ui_show_error(ui, "Invalid car number");
         } else if (result == -2) {
@@ -226,78 +135,25 @@ void on_add_car_clicked(GtkWidget *widget, gpointer data) {
     }
 }
 
-/**
- * Handle "Exit Car" button click
- * 
- * @param widget Button widget (unused, required by GTK callback)
- * @param data UIState pointer (contains app state and UI elements)
- * 
- * @details
- * This is YOUR MAIN UI FUNCTION for car exit. It:
- * 1. Gets car number from GUI
- * 2. Calls YOUR exit_car() function from parking.c
- * 3. Displays success/error messages
- * 4. Saves to CSV files (your fileio.c functions)
- * 5. Syncs to MySQL if enabled (your db.c functions)
- * 6. Updates GUI displays
- * 
- * @flow
- * User clicks "Exit Car" button
- *   → Get car number from GUI
- *   → Call exit_car() (YOUR FUNCTION in parking.c)
- *   → If success:
- *      → Save active cars to CSV (save_active_cars - YOUR FUNCTION)
- *      → Remove from MySQL active table (db_remove_active_car - YOUR FUNCTION)
- *      → Add to MySQL history table (db_add_history_car - YOUR FUNCTION)
- *      → Update GUI displays
- *   → If error:
- *      → Show error message
- * 
- * @note
- * - This function is called automatically by GTK when button is clicked
- * - exit_car() already calls append_history_car() to save history
- * - You need to ensure MySQL sync works correctly here
- */
 void on_exit_car_clicked(GtkWidget *widget, gpointer data) {
-    (void)widget; // Suppress unused parameter warning
+    (void)widget;
     UIState *ui = (UIState *)data;
     
-    // ========================================================================
-    // STEP 1: GET USER INPUT FROM GUI
-    // ========================================================================
-    
-    // Get car number from text entry field
     const char *car_number = gtk_entry_get_text(GTK_ENTRY(ui->exit_car_entry));
-    
-    // Validate: car number must not be empty
     if (strlen(car_number) == 0) {
         ui_show_error(ui, "Please enter car number");
-        return; // Stop here if invalid
+        return;
     }
     
-    // ========================================================================
-    // STEP 2: CALL YOUR EXIT_CAR FUNCTION
-    // ========================================================================
-    
-    // Call YOUR function from parking.c (does all processing and exits car)
     int result = exit_car(ui->app_state, car_number);
     
-    // ========================================================================
-    // STEP 3: HANDLE RESULT (SUCCESS OR ERROR)
-    // ========================================================================
-    
     if (result == 0) {
-        // SUCCESS: Car exited successfully
-        
-        // Show success message
         char msg[200];
         snprintf(msg, sizeof(msg), "Car %s exited successfully", car_number);
         ui_show_success(ui, msg);
         
-        // Clear exit car entry field (ready for next exit)
         gtk_entry_set_text(GTK_ENTRY(ui->exit_car_entry), "");
         
-        // Update garage dropdown (show updated availability)
         gtk_combo_box_text_remove_all(GTK_COMBO_BOX_TEXT(ui->garage_combo));
         for (int i = 0; i < ui->app_state->garage_count; i++) {
             char buffer[200];
@@ -308,49 +164,27 @@ void on_exit_car_clicked(GtkWidget *widget, gpointer data) {
         }
         gtk_combo_box_set_active(GTK_COMBO_BOX(ui->garage_combo), 0);
         
-        // Update GUI displays (Samiun's functions)
-        ui_update_car_list(ui);              // Refresh car list (car removed)
-        ui_update_garage_availability(ui);   // Refresh availability (slot freed)
-        ui_update_revenue(ui);                // Refresh revenue (bill added)
+        ui_update_car_list(ui);
+        ui_update_garage_availability(ui);
+        ui_update_revenue(ui);
         
-        // ====================================================================
-        // STEP 4: SAVE TO CSV FILE (YOUR FUNCTION)
-        // ====================================================================
-        
-        // Save updated active cars list to CSV (your fileio.c function)
-        // Note: exit_car() already called append_history_car() to save history
         save_active_cars(ui->app_state->active_cars, ui->app_state->active_count);
         
-        // ====================================================================
-        // STEP 5: SYNC TO MYSQL (YOUR FUNCTIONS - IF ENABLED)
-        // ====================================================================
-        
 #ifdef ENABLE_MYSQL
-        // Connect to MySQL
         MYSQL *conn = db_connect();
         if (conn) {
-            // Step 5a: Remove car from MySQL active table (your db.c function)
             db_remove_active_car(conn, car_number);
-            
-            // Step 5b: Get the last history record (car was just added to history)
             int idx = ui->app_state->history_count - 1;
             if (idx >= 0) {
-                // Add to MySQL history table (your db.c function)
                 db_add_history_car(conn, &ui->app_state->history_cars[idx]);
             }
-            
-            // Disconnect from MySQL
             db_disconnect(conn);
         }
 #endif
     } else {
-        // ERROR: Car not found
         ui_show_error(ui, "Car not found in active list");
     }
 }
-
-// REMOVED: Search functionality - not part of Suborna's tasks (Nilufa's work)
-// Search removed for presentation branch
 
 void on_save_clicked(GtkWidget *widget, gpointer data) {
     (void)widget; // Suppress unused parameter warning
@@ -368,7 +202,6 @@ void on_load_clicked(GtkWidget *widget, gpointer data) {
     load_history_cars(ui->app_state->history_cars, &ui->app_state->history_count);
     load_garages(ui->app_state->garages, &ui->app_state->garage_count);
     
-    // Recalculate garage availability
     for (int i = 0; i < ui->app_state->garage_count; i++) {
         ui->app_state->garages[i].available_slots = ui->app_state->garages[i].total_capacity;
     }
@@ -381,7 +214,6 @@ void on_load_clicked(GtkWidget *widget, gpointer data) {
     ui_update_garage_availability(ui);
     ui_update_revenue(ui);
     
-    // Update garage combo
     gtk_combo_box_text_remove_all(GTK_COMBO_BOX_TEXT(ui->garage_combo));
     for (int i = 0; i < ui->app_state->garage_count; i++) {
         char buffer[200];
@@ -395,17 +227,7 @@ void on_load_clicked(GtkWidget *widget, gpointer data) {
     ui_show_success(ui, "Data loaded successfully");
 }
 
-// REMOVED: Logout functionality - not part of Suborna's tasks
-
-// REMOVED: Exit app button - using window close instead
-// Auto-save handled in main.c on_shutdown
-
-// REMOVED: Sort functionality - not part of Suborna's tasks (Nilufa's work)
-
-// REMOVED: Login screen - not part of Suborna's tasks
-// Application now goes directly to dashboard
 void ui_show_login(UIState *ui) {
-    // Empty function - login removed for presentation
     (void)ui;
 }
 
@@ -423,12 +245,10 @@ void ui_show_dashboard(UIState *ui) {
     gtk_container_add(GTK_CONTAINER(window), main_box);
     gtk_container_set_border_width(GTK_CONTAINER(main_box), 10);
     
-    // Left Panel
     left_panel = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
     gtk_box_pack_start(GTK_BOX(main_box), left_panel, FALSE, FALSE, 0);
     gtk_widget_set_size_request(left_panel, 400, -1);
     
-    // Entry Frame
     entry_frame = gtk_frame_new("Add Car Entry");
     gtk_box_pack_start(GTK_BOX(left_panel), entry_frame, FALSE, FALSE, 0);
     
@@ -489,7 +309,6 @@ void ui_show_dashboard(UIState *ui) {
     g_signal_connect(add_button, "clicked", G_CALLBACK(on_add_car_clicked), ui);
     gtk_grid_attach(GTK_GRID(grid), add_button, 0, 4, 2, 1);
     
-    // Exit Frame
     exit_frame = gtk_frame_new("Exit Car");
     gtk_box_pack_start(GTK_BOX(left_panel), exit_frame, FALSE, FALSE, 0);
     
@@ -510,7 +329,6 @@ void ui_show_dashboard(UIState *ui) {
     g_signal_connect(exit_button, "clicked", G_CALLBACK(on_exit_car_clicked), ui);
     gtk_box_pack_start(GTK_BOX(exit_box), exit_button, FALSE, FALSE, 0);
     
-    // Garage Availability
     GtkWidget *avail_frame = gtk_frame_new("Garage Availability");
     gtk_box_pack_start(GTK_BOX(left_panel), avail_frame, FALSE, FALSE, 0);
     
@@ -519,20 +337,14 @@ void ui_show_dashboard(UIState *ui) {
     gtk_container_add(GTK_CONTAINER(avail_frame), ui->garage_availability_label);
     gtk_container_set_border_width(GTK_CONTAINER(avail_frame), 10);
     
-    // Status Label
     ui->status_label = gtk_label_new("Ready");
     gtk_label_set_justify(GTK_LABEL(ui->status_label), GTK_JUSTIFY_LEFT);
     gtk_widget_set_halign(ui->status_label, GTK_ALIGN_START);
     gtk_box_pack_start(GTK_BOX(left_panel), ui->status_label, FALSE, FALSE, 0);
     
-    // Right Panel
     right_panel = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
     gtk_box_pack_start(GTK_BOX(main_box), right_panel, TRUE, TRUE, 0);
     
-    // REMOVED: Search and Sort - not part of Suborna's tasks (Nilufa's work)
-    // Search/Sort removed for presentation branch
-    
-    // Car List
     list_frame = gtk_frame_new("Active Parked Cars");
     gtk_box_pack_start(GTK_BOX(right_panel), list_frame, TRUE, TRUE, 0);
     
@@ -558,23 +370,17 @@ void ui_show_dashboard(UIState *ui) {
     
     gtk_container_add(GTK_CONTAINER(scrolled), ui->car_list_treeview);
     
-    // Buttons - Only Suborna's File Handling features
     button_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
     gtk_box_pack_start(GTK_BOX(right_panel), button_box, FALSE, FALSE, 0);
     
-    // Save button - Part of Suborna's File Handling task
     GtkWidget *save_button = gtk_button_new_with_label("Save");
     g_signal_connect(save_button, "clicked", G_CALLBACK(on_save_clicked), ui);
     gtk_box_pack_start(GTK_BOX(button_box), save_button, TRUE, TRUE, 0);
     
-    // Load button - Part of Suborna's File Handling task
     GtkWidget *load_button = gtk_button_new_with_label("Load");
     g_signal_connect(load_button, "clicked", G_CALLBACK(on_load_clicked), ui);
     gtk_box_pack_start(GTK_BOX(button_box), load_button, TRUE, TRUE, 0);
     
-    // REMOVED: Logout and Exit App buttons - not part of Suborna's tasks
-    
-    // Total Revenue
     GtkWidget *revenue_frame = gtk_frame_new("Total Revenue");
     gtk_box_pack_start(GTK_BOX(right_panel), revenue_frame, FALSE, FALSE, 0);
     
@@ -585,7 +391,6 @@ void ui_show_dashboard(UIState *ui) {
     
     ui->dashboard_window = window;
     
-    // Initial updates
     ui_update_car_list(ui);
     ui_update_garage_availability(ui);
     ui_update_revenue(ui);
@@ -597,7 +402,6 @@ void ui_init(UIState *ui, AppState *app_state, GtkApplication *app) {
     memset(ui, 0, sizeof(UIState));
     ui->app_state = app_state;
     ui->app = app;
-    // REMOVED: sort_column and sort_order - not part of Suborna's tasks
     g_ui_state = ui;
 }
 

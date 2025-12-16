@@ -3,10 +3,8 @@
 
 #include "models.h"
 
-// Bill calculation function (moved from billing.c)
 float calculate_bill(const Garage *garage, VehicleType vehicle_type, int duration_hours);
-
-// Parking management functions
+float get_total_revenue(const ParkingHistory *history, int history_count);
 int add_car_entry(AppState *state, const char *car_number, VehicleType vehicle_type, 
                   int garage_id, int duration_hours);
 int exit_car(AppState *state, const char *car_number);
