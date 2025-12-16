@@ -1,6 +1,6 @@
 # Smart Parking Management System - Suborna's Tasks
 
-## Suborna Akter's Tasks
+## My Task List
 1. **MySQL Integration**
 2. **Car Entry/Exit**
 3. **File Handling**
@@ -160,6 +160,4 @@
 4. **Exit Car**: Enter "ABC-1234", click "Exit Car"
 5. **Check**: Receipt generated in `data/receipts/`, data saved to CSV files
 
----
 
-**Ready for Suborna's presentation! 🎉**
