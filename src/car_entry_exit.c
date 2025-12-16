@@ -4,6 +4,65 @@
 #include <time.h>
 #include <ctype.h>
 
+/**
+ * ============================================================================
+ * SUBORNA AKTER - Car Entry/Exit Functions
+ * ============================================================================
+ * These functions handle adding cars to parking and exiting cars.
+ * Bill calculation functions are also included here.
+ * ============================================================================
+ */
+
+/**
+ * Calculate parking bill
+ * 
+ * @param garage Pointer to Garage structure
+ * @param vehicle_type VEHICLE_CAR or VEHICLE_BIKE
+ * @param duration_hours Parking duration in hours
+ * @return Calculated bill amount
+ * 
+ * @details
+ * Calculates bill by multiplying hourly rate by duration.
+ * Different rates for cars and bikes.
+ */
+float calculate_bill(const Garage *garage, VehicleType vehicle_type, int duration_hours) {
+    float rate = (vehicle_type == VEHICLE_CAR) ? garage->hourly_rate_car : garage->hourly_rate_bike;
+    return rate * duration_hours;
+}
+
+/**
+ * Get total revenue from parking history
+ * 
+ * @param history Array of parking history records
+ * @param history_count Number of records
+ * @return Total revenue amount
+ */
+float get_total_revenue(const ParkingHistory *history, int history_count) {
+    float revenue = 0.0;
+    for (int i = 0; i < history_count; i++) {
+        revenue += history[i].bill_amount;
+    }
+    return revenue;
+}
+
+/**
+ * Get revenue for a specific garage
+ * 
+ * @param history Array of parking history records
+ * @param history_count Number of records
+ * @param garage_id Garage ID to calculate revenue for
+ * @return Revenue for the specified garage
+ */
+float get_garage_revenue(const ParkingHistory *history, int history_count, int garage_id) {
+    float revenue = 0.0;
+    for (int i = 0; i < history_count; i++) {
+        if (history[i].garage_id == garage_id) {
+            revenue += history[i].bill_amount;
+        }
+    }
+    return revenue;
+}
+
 void initialize_default_garages(Garage *garages, int *count) {
     *count = 3;
     
@@ -248,7 +307,7 @@ int add_car_entry(AppState *state, const char *car_number, VehicleType vehicle_t
     car->garage_id = garage_id;                     // Which garage
     car->duration_hours = duration_hours;           // How long
     car->entry_time = time(NULL);                   // Current time
-    // Calculate bill automatically (calls Sabiha's billing function)
+    // Calculate bill automatically (using calculate_bill function in this file)
     car->bill_amount = calculate_bill(&state->garages[garage_idx], vehicle_type, duration_hours);
     
     // Increment active car count
