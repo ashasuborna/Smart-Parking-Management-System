@@ -1,7 +1,6 @@
 #include "ui.h"
 #include "car_entry_exit.h"
 #include "file_handling.h"
-#include "billing.h"
 // Removed auth.h - no login for Suborna's presentation
 #include <string.h>
 #include <stdio.h>

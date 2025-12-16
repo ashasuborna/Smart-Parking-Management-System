@@ -2,7 +2,6 @@
 #include "models.h"
 #include "car_entry_exit.h"
 #include "file_handling.h"
-#include "billing.h"
 #include "ui.h"
 
 #ifdef ENABLE_MYSQL
@@ -39,7 +38,7 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
                                    app_state.active_cars[i].garage_id, -1);
     }
     
-    // Calculate total revenue
+    // Calculate total revenue (using function from car_entry_exit.c)
     app_state.total_revenue = get_total_revenue(app_state.history_cars, app_state.history_count);
     
 #ifdef ENABLE_MYSQL

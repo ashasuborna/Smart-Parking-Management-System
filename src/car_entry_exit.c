@@ -1,5 +1,4 @@
 #include "car_entry_exit.h"
-#include "billing.h"
 #include "file_handling.h"
 #include <string.h>
 #include <time.h>
