@@ -58,10 +58,9 @@
 - **Exit Car**: Enter car number, click "Exit Car" - system removes car, generates receipt, updates garage slots
 
 #### Files:
-- `src/car_entry_exit.c` - Entry/exit logic (`add_car_entry()`, `exit_car()`)
+- `src/car_entry_exit.c` - Entry/exit logic and bill calculation (`add_car_entry()`, `exit_car()`, `calculate_bill()`)
 - `src/car_entry_exit.h` - Function declarations
 - `src/ui.c` - GUI handlers (`on_add_car_clicked()`, `on_exit_car_clicked()`)
-- `src/billing.c` - Bill calculation (used by car entry)
 
 ---
 
@@ -137,9 +136,8 @@
 ## 📁 Files for Each Feature
 
 ### Car Entry/Exit:
-- `src/car_entry_exit.c` / `src/car_entry_exit.h`
+- `src/car_entry_exit.c` / `src/car_entry_exit.h` (includes bill calculation)
 - `src/ui.c` (handlers: `on_add_car_clicked`, `on_exit_car_clicked`)
-- `src/billing.c` / `src/billing.h` (bill calculation - needed for car entry)
 
 ### File Handling:
 - `src/file_handling.c` / `src/file_handling.h`
