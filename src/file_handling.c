@@ -1,4 +1,4 @@
-#include "fileio.h"
+#include "file_handling.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,21 +11,23 @@
 #define mkdir(path, mode) _mkdir(path)
 #endif
 
+// Create data directories if they don't exist
 void ensure_data_directory(void) {
     mkdir(DATA_DIR, 0755);
-    mkdir(RECEIPTS_DIR, 0755);
 }
 
+// Convert time_t to string format "YYYY-MM-DD HH:MM:SS"
 char* format_timestamp(time_t t, char *buffer, size_t size) {
     struct tm *tm_info = localtime(&t);
     strftime(buffer, size, "%Y-%m-%d %H:%M:%S", tm_info);
     return buffer;
 }
 
+// Convert timestamp string "YYYY-MM-DD HH:MM:SS" back to time_t
 time_t parse_timestamp(const char *str) {
     struct tm tm = {0};
+    
 #ifdef _WIN32
-    // Windows alternative: use sscanf
     if (sscanf(str, "%d-%d-%d %d:%d:%d", 
                &tm.tm_year, &tm.tm_mon, &tm.tm_mday,
                &tm.tm_hour, &tm.tm_min, &tm.tm_sec) == 6) {
@@ -38,45 +40,11 @@ time_t parse_timestamp(const char *str) {
         return mktime(&tm);
     }
 #endif
+    
     return time(NULL);
 }
 
-int load_users(User *users, int *count) {
-    FILE *fp = fopen(USERS_FILE, "r");
-    if (!fp) {
-        *count = 0;
-        return 0;
-    }
-    
-    *count = 0;
-    char line[200];
-    while (fgets(line, sizeof(line), fp) && *count < 100) {
-        char username[MAX_USERNAME_LEN];
-        char password[MAX_PASSWORD_LEN];
-        char role_str[10];
-        
-        if (sscanf(line, "%49[^:]:%49[^:]:%9s", username, password, role_str) == 3) {
-            strncpy(users[*count].username, username, MAX_USERNAME_LEN - 1);
-            strncpy(users[*count].password, password, MAX_PASSWORD_LEN - 1);
-            users[*count].role = (strcmp(role_str, "admin") == 0) ? ROLE_ADMIN : ROLE_USER;
-            (*count)++;
-        }
-    }
-    
-    fclose(fp);
-    return 1;
-}
-
-int save_user(const User *user) {
-    ensure_data_directory();
-    FILE *fp = fopen(USERS_FILE, "a");
-    if (!fp) return 0;
-    
-    fprintf(fp, "%s:%s:%s\n", user->username, user->password, role_to_string(user->role));
-    fclose(fp);
-    return 1;
-}
-
+// Load active cars from CSV file
 int load_active_cars(ParkingActive *cars, int *count) {
     FILE *fp = fopen(ACTIVE_FILE, "r");
     if (!fp) {
@@ -87,9 +55,15 @@ int load_active_cars(ParkingActive *cars, int *count) {
     char line[500];
     *count = 0;
     
-    // Skip header
     if (fgets(line, sizeof(line), fp)) {
         while (fgets(line, sizeof(line), fp) && *count < MAX_ACTIVE_CARS) {
+            // Skip empty lines
+            int len = strlen(line);
+            while (len > 0 && (line[len-1] == '\n' || line[len-1] == '\r' || line[len-1] == ' ' || line[len-1] == '\t')) {
+                len--;
+            }
+            if (len == 0) continue;
+            
             char car_number[MAX_CAR_NUMBER_LEN];
             char vehicle_str[10];
             int garage_id, duration_hours;
@@ -99,6 +73,7 @@ int load_active_cars(ParkingActive *cars, int *count) {
             if (sscanf(line, "%19[^,],%9[^,],%d,%d,%49[^,],%f",
                       car_number, vehicle_str, &garage_id, &duration_hours, entry_time_str, &bill_amount) == 6) {
                 strncpy(cars[*count].car_number, car_number, MAX_CAR_NUMBER_LEN - 1);
+                cars[*count].car_number[MAX_CAR_NUMBER_LEN - 1] = '\0';
                 cars[*count].vehicle_type = (strcmp(vehicle_str, "Car") == 0) ? VEHICLE_CAR : VEHICLE_BIKE;
                 cars[*count].garage_id = garage_id;
                 cars[*count].duration_hours = duration_hours;
@@ -113,6 +88,7 @@ int load_active_cars(ParkingActive *cars, int *count) {
     return 1;
 }
 
+// Save active cars to CSV file (overwrites existing file)
 int save_active_cars(const ParkingActive *cars, int count) {
     ensure_data_directory();
     FILE *fp = fopen(ACTIVE_FILE, "w");
@@ -136,6 +112,7 @@ int save_active_cars(const ParkingActive *cars, int count) {
     return 1;
 }
 
+// Load parking history from CSV file
 int load_history_cars(ParkingHistory *cars, int *count) {
     FILE *fp = fopen(HISTORY_FILE, "r");
     if (!fp) {
@@ -146,9 +123,16 @@ int load_history_cars(ParkingHistory *cars, int *count) {
     char line[500];
     *count = 0;
     
-    // Skip header
+    // Skip header row
     if (fgets(line, sizeof(line), fp)) {
         while (fgets(line, sizeof(line), fp) && *count < MAX_HISTORY_CARS) {
+            // Skip empty lines
+            int len = strlen(line);
+            while (len > 0 && (line[len-1] == '\n' || line[len-1] == '\r' || line[len-1] == ' ' || line[len-1] == '\t')) {
+                len--;
+            }
+            if (len == 0) continue;
+            
             char car_number[MAX_CAR_NUMBER_LEN];
             char vehicle_str[10];
             int garage_id, duration_hours;
@@ -159,6 +143,7 @@ int load_history_cars(ParkingHistory *cars, int *count) {
                       car_number, vehicle_str, &garage_id, &duration_hours,
                       entry_time_str, exit_time_str, &bill_amount) == 7) {
                 strncpy(cars[*count].car_number, car_number, MAX_CAR_NUMBER_LEN - 1);
+                cars[*count].car_number[MAX_CAR_NUMBER_LEN - 1] = '\0';
                 cars[*count].vehicle_type = (strcmp(vehicle_str, "Car") == 0) ? VEHICLE_CAR : VEHICLE_BIKE;
                 cars[*count].garage_id = garage_id;
                 cars[*count].duration_hours = duration_hours;
@@ -174,6 +159,7 @@ int load_history_cars(ParkingHistory *cars, int *count) {
     return 1;
 }
 
+// Save parking history to CSV file (overwrites existing file)
 int save_history_cars(const ParkingHistory *cars, int count) {
     ensure_data_directory();
     FILE *fp = fopen(HISTORY_FILE, "w");
@@ -199,19 +185,35 @@ int save_history_cars(const ParkingHistory *cars, int count) {
     return 1;
 }
 
+// Append one history record to CSV file
 int append_history_car(const ParkingHistory *car) {
     ensure_data_directory();
-    FILE *fp = fopen(HISTORY_FILE, "a");
+    
+    // Check if file exists and get its size
+    FILE *fp = fopen(HISTORY_FILE, "r");
+    long file_size = 0;
+    if (fp) {
+        fseek(fp, 0, SEEK_END);
+        file_size = ftell(fp);
+        fclose(fp);
+    }
+    
+    // Open in append mode
+    fp = fopen(HISTORY_FILE, "a");
     if (!fp) {
-        // Create file with header if doesn't exist
+        // File doesn't exist - create it with header
         fp = fopen(HISTORY_FILE, "w");
         if (!fp) return 0;
         fprintf(fp, "car_number,vehicle_type,garage_id,duration_hours,entry_time,exit_time,bill_amount\n");
-    } else {
-        fseek(fp, 0, SEEK_END);
-        if (ftell(fp) == 0) {
-            fprintf(fp, "car_number,vehicle_type,garage_id,duration_hours,entry_time,exit_time,bill_amount\n");
-        }
+    } else if (file_size == 0) {
+        // File exists but is empty - write header first
+        fclose(fp);
+        fp = fopen(HISTORY_FILE, "w");
+        if (!fp) return 0;
+        fprintf(fp, "car_number,vehicle_type,garage_id,duration_hours,entry_time,exit_time,bill_amount\n");
+        fclose(fp);
+        fp = fopen(HISTORY_FILE, "a");
+        if (!fp) return 0;
     }
     
     char entry_buf[50], exit_buf[50];
@@ -231,6 +233,7 @@ int append_history_car(const ParkingHistory *car) {
     return 1;
 }
 
+// Load garages from CSV file
 int load_garages(Garage *garages, int *count) {
     FILE *fp = fopen(GARAGES_FILE, "r");
     if (!fp) {
@@ -241,16 +244,12 @@ int load_garages(Garage *garages, int *count) {
     char line[500];
     *count = 0;
     
-    // Skip header
     if (fgets(line, sizeof(line), fp)) {
         while (fgets(line, sizeof(line), fp) && *count < MAX_GARAGES) {
             if (sscanf(line, "%d,%99[^,],%d,%d,%f,%f",
-                      &garages[*count].id,
-                      garages[*count].name,
-                      &garages[*count].total_capacity,
-                      &garages[*count].available_slots,
-                      &garages[*count].hourly_rate_car,
-                      &garages[*count].hourly_rate_bike) == 6) {
+                      &garages[*count].id, garages[*count].name,
+                      &garages[*count].total_capacity, &garages[*count].available_slots,
+                      &garages[*count].hourly_rate_car, &garages[*count].hourly_rate_bike) == 6) {
                 (*count)++;
             }
         }
@@ -260,6 +259,7 @@ int load_garages(Garage *garages, int *count) {
     return 1;
 }
 
+// Save garages to CSV file
 int save_garages(const Garage *garages, int count) {
     ensure_data_directory();
     FILE *fp = fopen(GARAGES_FILE, "w");
@@ -276,38 +276,6 @@ int save_garages(const Garage *garages, int count) {
                 garages[i].hourly_rate_car,
                 garages[i].hourly_rate_bike);
     }
-    
-    fclose(fp);
-    return 1;
-}
-
-int export_receipt(const ParkingHistory *car, const Garage *garage) {
-    ensure_data_directory();
-    
-    char filename[200];
-    snprintf(filename, sizeof(filename), "%s/receipt_%s_%ld.txt", RECEIPTS_DIR, car->car_number, (long)car->exit_time);
-    
-    FILE *fp = fopen(filename, "w");
-    if (!fp) return 0;
-    
-    char entry_buf[50], exit_buf[50];
-    format_timestamp(car->entry_time, entry_buf, sizeof(entry_buf));
-    format_timestamp(car->exit_time, exit_buf, sizeof(exit_buf));
-    
-    fprintf(fp, "========================================\n");
-    fprintf(fp, "    SMART PARKING MANAGEMENT SYSTEM\n");
-    fprintf(fp, "            PARKING RECEIPT\n");
-    fprintf(fp, "========================================\n\n");
-    fprintf(fp, "Car Number:      %s\n", car->car_number);
-    fprintf(fp, "Vehicle Type:    %s\n", vehicle_type_to_string(car->vehicle_type));
-    fprintf(fp, "Garage:          %s (ID: %d)\n", garage->name, garage->id);
-    fprintf(fp, "Duration:        %d hour(s)\n", car->duration_hours);
-    fprintf(fp, "Entry Time:      %s\n", entry_buf);
-    fprintf(fp, "Exit Time:       %s\n", exit_buf);
-    fprintf(fp, "----------------------------------------\n");
-    fprintf(fp, "Total Amount:    $%.2f\n", car->bill_amount);
-    fprintf(fp, "========================================\n");
-    fprintf(fp, "Thank you for using our service!\n");
     
     fclose(fp);
     return 1;

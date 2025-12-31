@@ -16,15 +16,13 @@ TARGET = smart_parking
 SRCDIR = src
 SOURCES = $(SRCDIR)/main.c \
           $(SRCDIR)/models.c \
-          $(SRCDIR)/fileio.c \
-          $(SRCDIR)/auth.c \
-          $(SRCDIR)/billing.c \
-          $(SRCDIR)/parking.c \
+          $(SRCDIR)/file_handling.c \
+          $(SRCDIR)/car_entry_exit.c \
           $(SRCDIR)/ui.c
 
 # Add MySQL source if enabled
 ifdef ENABLE_MYSQL
-SOURCES += $(SRCDIR)/db.c
+SOURCES += $(SRCDIR)/mysql_integration.c
 endif
 
 OBJECTS = $(SOURCES:.c=.o)

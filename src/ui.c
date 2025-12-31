@@ -1,13 +1,11 @@
 #include "ui.h"
-#include "parking.h"
-#include "fileio.h"
-#include "billing.h"
-#include "auth.h"
+#include "car_entry_exit.h"
+#include "file_handling.h"
 #include <string.h>
 #include <stdio.h>
 
 #ifdef ENABLE_MYSQL
-#include "db.h"
+#include "mysql_integration.h"
 #endif
 
 static UIState *g_ui_state = NULL;
@@ -51,19 +49,9 @@ void ui_update_garage_availability(UIState *ui) {
 }
 
 void ui_update_car_list(UIState *ui) {
-    // Clear existing
     gtk_list_store_clear(ui->car_list_store);
     
-    const char *search_text = gtk_entry_get_text(GTK_ENTRY(ui->search_entry));
-    int search_len = strlen(search_text);
-    
-    // Add cars
     for (int i = 0; i < ui->app_state->active_count; i++) {
-        // Filter by search
-        if (search_len > 0 && strstr(ui->app_state->active_cars[i].car_number, search_text) == NULL) {
-            continue;
-        }
-        
         char entry_time_str[50];
         format_timestamp(ui->app_state->active_cars[i].entry_time, entry_time_str, sizeof(entry_time_str));
         
@@ -80,31 +68,11 @@ void ui_update_car_list(UIState *ui) {
     }
 }
 
-void on_login_clicked(GtkWidget *widget, gpointer data) {
-    (void)widget; // Suppress unused parameter warning
-    UIState *ui = (UIState *)data;
-    const char *username = gtk_entry_get_text(GTK_ENTRY(ui->login_username_entry));
-    const char *password = gtk_entry_get_text(GTK_ENTRY(ui->login_password_entry));
-    
-    if (strlen(username) == 0 || strlen(password) == 0) {
-        gtk_label_set_text(GTK_LABEL(ui->login_status_label), "Please enter username and password");
-        return;
-    }
-    
-    if (authenticate_user(username, password, &ui->app_state->current_user)) {
-        ui->app_state->is_logged_in = 1;
-        gtk_widget_hide(ui->login_window);
-        ui_show_dashboard(ui);
-    } else {
-        gtk_label_set_text(GTK_LABEL(ui->login_status_label), "Invalid username or password");
-    }
-}
-
 void on_add_car_clicked(GtkWidget *widget, gpointer data) {
-    (void)widget; // Suppress unused parameter warning
+    (void)widget;
     UIState *ui = (UIState *)data;
-    const char *car_number = gtk_entry_get_text(GTK_ENTRY(ui->car_number_entry));
     
+    const char *car_number = gtk_entry_get_text(GTK_ENTRY(ui->car_number_entry));
     if (strlen(car_number) == 0) {
         ui_show_error(ui, "Please enter car number");
         return;
@@ -125,7 +93,6 @@ void on_add_car_clicked(GtkWidget *widget, gpointer data) {
         
         gtk_entry_set_text(GTK_ENTRY(ui->car_number_entry), "");
         
-        // Update garage combo
         gtk_combo_box_text_remove_all(GTK_COMBO_BOX_TEXT(ui->garage_combo));
         for (int i = 0; i < ui->app_state->garage_count; i++) {
             char buffer[200];
@@ -138,6 +105,7 @@ void on_add_car_clicked(GtkWidget *widget, gpointer data) {
         
         ui_update_car_list(ui);
         ui_update_garage_availability(ui);
+        
         save_active_cars(ui->app_state->active_cars, ui->app_state->active_count);
         
 #ifdef ENABLE_MYSQL
@@ -150,26 +118,28 @@ void on_add_car_clicked(GtkWidget *widget, gpointer data) {
             db_disconnect(conn);
         }
 #endif
-    } else if (result == -1) {
-        ui_show_error(ui, "Invalid car number");
-    } else if (result == -2) {
-        ui_show_error(ui, "Invalid duration (1-12 hours)");
-    } else if (result == -3) {
-        ui_show_error(ui, "Maximum cars reached");
-    } else if (result == -4) {
-        ui_show_error(ui, "Car already parked");
-    } else if (result == -5) {
-        ui_show_error(ui, "Garage not found");
-    } else if (result == -6) {
-        ui_show_error(ui, "Garage is full");
+    } else {
+        if (result == -1) {
+            ui_show_error(ui, "Invalid car number");
+        } else if (result == -2) {
+            ui_show_error(ui, "Invalid duration (1-12 hours)");
+        } else if (result == -3) {
+            ui_show_error(ui, "Maximum cars reached");
+        } else if (result == -4) {
+            ui_show_error(ui, "Car already parked");
+        } else if (result == -5) {
+            ui_show_error(ui, "Garage not found");
+        } else if (result == -6) {
+            ui_show_error(ui, "Garage is full");
+        }
     }
 }
 
 void on_exit_car_clicked(GtkWidget *widget, gpointer data) {
-    (void)widget; // Suppress unused parameter warning
+    (void)widget;
     UIState *ui = (UIState *)data;
-    const char *car_number = gtk_entry_get_text(GTK_ENTRY(ui->exit_car_entry));
     
+    const char *car_number = gtk_entry_get_text(GTK_ENTRY(ui->exit_car_entry));
     if (strlen(car_number) == 0) {
         ui_show_error(ui, "Please enter car number");
         return;
@@ -184,7 +154,6 @@ void on_exit_car_clicked(GtkWidget *widget, gpointer data) {
         
         gtk_entry_set_text(GTK_ENTRY(ui->exit_car_entry), "");
         
-        // Update garage combo
         gtk_combo_box_text_remove_all(GTK_COMBO_BOX_TEXT(ui->garage_combo));
         for (int i = 0; i < ui->app_state->garage_count; i++) {
             char buffer[200];
@@ -198,6 +167,7 @@ void on_exit_car_clicked(GtkWidget *widget, gpointer data) {
         ui_update_car_list(ui);
         ui_update_garage_availability(ui);
         ui_update_revenue(ui);
+        
         save_active_cars(ui->app_state->active_cars, ui->app_state->active_count);
         
 #ifdef ENABLE_MYSQL
@@ -216,19 +186,6 @@ void on_exit_car_clicked(GtkWidget *widget, gpointer data) {
     }
 }
 
-void on_search_changed(GtkWidget *widget, gpointer data) {
-    (void)widget; // Suppress unused parameter warning
-    UIState *ui = (UIState *)data;
-    ui_update_car_list(ui);
-}
-
-void on_clear_search_clicked(GtkWidget *widget, gpointer data) {
-    (void)widget; // Suppress unused parameter warning
-    UIState *ui = (UIState *)data;
-    gtk_entry_set_text(GTK_ENTRY(ui->search_entry), "");
-    ui_update_car_list(ui);
-}
-
 void on_save_clicked(GtkWidget *widget, gpointer data) {
     (void)widget; // Suppress unused parameter warning
     UIState *ui = (UIState *)data;
@@ -245,7 +202,6 @@ void on_load_clicked(GtkWidget *widget, gpointer data) {
     load_history_cars(ui->app_state->history_cars, &ui->app_state->history_count);
     load_garages(ui->app_state->garages, &ui->app_state->garage_count);
     
-    // Recalculate garage availability
     for (int i = 0; i < ui->app_state->garage_count; i++) {
         ui->app_state->garages[i].available_slots = ui->app_state->garages[i].total_capacity;
     }
@@ -258,7 +214,6 @@ void on_load_clicked(GtkWidget *widget, gpointer data) {
     ui_update_garage_availability(ui);
     ui_update_revenue(ui);
     
-    // Update garage combo
     gtk_combo_box_text_remove_all(GTK_COMBO_BOX_TEXT(ui->garage_combo));
     for (int i = 0; i < ui->app_state->garage_count; i++) {
         char buffer[200];
@@ -272,80 +227,8 @@ void on_load_clicked(GtkWidget *widget, gpointer data) {
     ui_show_success(ui, "Data loaded successfully");
 }
 
-void on_logout_clicked(GtkWidget *widget, gpointer data) {
-    (void)widget; // Suppress unused parameter warning
-    UIState *ui = (UIState *)data;
-    on_save_clicked(NULL, data); // Save before logout
-    ui->app_state->is_logged_in = 0;
-    gtk_widget_hide(ui->dashboard_window);
-    ui_show_login(ui);
-}
-
-void on_exit_app_clicked(GtkWidget *widget, gpointer data) {
-    (void)widget; // Suppress unused parameter warning
-    UIState *ui = (UIState *)data;
-    on_save_clicked(NULL, data); // Save before exit
-    g_application_quit(G_APPLICATION(ui->app));
-}
-
-void on_sort_changed(GtkWidget *widget, gpointer data) {
-    (void)widget; // Suppress unused parameter warning
-    UIState *ui = (UIState *)data;
-    // Simple sort - just refresh the list
-    ui_update_car_list(ui);
-}
-
 void ui_show_login(UIState *ui) {
-    GtkWidget *window, *box, *grid, *username_label, *password_label;
-    GtkWidget *login_button;
-    
-    window = gtk_application_window_new(ui->app);
-    gtk_window_set_title(GTK_WINDOW(window), "Smart Parking - Login");
-    gtk_window_set_default_size(GTK_WINDOW(window), 400, 200);
-    gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
-    gtk_window_set_resizable(GTK_WINDOW(window), FALSE);
-    
-    box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
-    gtk_container_add(GTK_CONTAINER(window), box);
-    gtk_container_set_border_width(GTK_CONTAINER(box), 20);
-    
-    GtkWidget *title = gtk_label_new("Smart Parking Management System");
-    gtk_label_set_markup(GTK_LABEL(title), "<span size='large' weight='bold'>Smart Parking Management System</span>");
-    gtk_box_pack_start(GTK_BOX(box), title, FALSE, FALSE, 0);
-    
-    grid = gtk_grid_new();
-    gtk_grid_set_row_spacing(GTK_GRID(grid), 10);
-    gtk_grid_set_column_spacing(GTK_GRID(grid), 10);
-    gtk_box_pack_start(GTK_BOX(box), grid, TRUE, TRUE, 0);
-    
-    username_label = gtk_label_new("Username:");
-    gtk_widget_set_halign(username_label, GTK_ALIGN_START);
-    gtk_grid_attach(GTK_GRID(grid), username_label, 0, 0, 1, 1);
-    
-    ui->login_username_entry = gtk_entry_new();
-    gtk_entry_set_placeholder_text(GTK_ENTRY(ui->login_username_entry), "Enter username");
-    gtk_grid_attach(GTK_GRID(grid), ui->login_username_entry, 1, 0, 1, 1);
-    
-    password_label = gtk_label_new("Password:");
-    gtk_widget_set_halign(password_label, GTK_ALIGN_START);
-    gtk_grid_attach(GTK_GRID(grid), password_label, 0, 1, 1, 1);
-    
-    ui->login_password_entry = gtk_entry_new();
-    gtk_entry_set_placeholder_text(GTK_ENTRY(ui->login_password_entry), "Enter password");
-    gtk_entry_set_visibility(GTK_ENTRY(ui->login_password_entry), FALSE);
-    gtk_grid_attach(GTK_GRID(grid), ui->login_password_entry, 1, 1, 1, 1);
-    
-    login_button = gtk_button_new_with_label("Login");
-    gtk_widget_set_size_request(login_button, -1, 35);
-    g_signal_connect(login_button, "clicked", G_CALLBACK(on_login_clicked), ui);
-    gtk_box_pack_start(GTK_BOX(box), login_button, FALSE, FALSE, 0);
-    
-    ui->login_status_label = gtk_label_new("");
-    gtk_label_set_justify(GTK_LABEL(ui->login_status_label), GTK_JUSTIFY_CENTER);
-    gtk_box_pack_start(GTK_BOX(box), ui->login_status_label, FALSE, FALSE, 0);
-    
-    ui->login_window = window;
-    gtk_widget_show_all(window);
+    (void)ui;
 }
 
 void ui_show_dashboard(UIState *ui) {
@@ -362,12 +245,10 @@ void ui_show_dashboard(UIState *ui) {
     gtk_container_add(GTK_CONTAINER(window), main_box);
     gtk_container_set_border_width(GTK_CONTAINER(main_box), 10);
     
-    // Left Panel
     left_panel = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
     gtk_box_pack_start(GTK_BOX(main_box), left_panel, FALSE, FALSE, 0);
     gtk_widget_set_size_request(left_panel, 400, -1);
     
-    // Entry Frame
     entry_frame = gtk_frame_new("Add Car Entry");
     gtk_box_pack_start(GTK_BOX(left_panel), entry_frame, FALSE, FALSE, 0);
     
@@ -428,7 +309,6 @@ void ui_show_dashboard(UIState *ui) {
     g_signal_connect(add_button, "clicked", G_CALLBACK(on_add_car_clicked), ui);
     gtk_grid_attach(GTK_GRID(grid), add_button, 0, 4, 2, 1);
     
-    // Exit Frame
     exit_frame = gtk_frame_new("Exit Car");
     gtk_box_pack_start(GTK_BOX(left_panel), exit_frame, FALSE, FALSE, 0);
     
@@ -449,7 +329,6 @@ void ui_show_dashboard(UIState *ui) {
     g_signal_connect(exit_button, "clicked", G_CALLBACK(on_exit_car_clicked), ui);
     gtk_box_pack_start(GTK_BOX(exit_box), exit_button, FALSE, FALSE, 0);
     
-    // Garage Availability
     GtkWidget *avail_frame = gtk_frame_new("Garage Availability");
     gtk_box_pack_start(GTK_BOX(left_panel), avail_frame, FALSE, FALSE, 0);
     
@@ -458,37 +337,14 @@ void ui_show_dashboard(UIState *ui) {
     gtk_container_add(GTK_CONTAINER(avail_frame), ui->garage_availability_label);
     gtk_container_set_border_width(GTK_CONTAINER(avail_frame), 10);
     
-    // Status Label
     ui->status_label = gtk_label_new("Ready");
     gtk_label_set_justify(GTK_LABEL(ui->status_label), GTK_JUSTIFY_LEFT);
     gtk_widget_set_halign(ui->status_label, GTK_ALIGN_START);
     gtk_box_pack_start(GTK_BOX(left_panel), ui->status_label, FALSE, FALSE, 0);
     
-    // Right Panel
     right_panel = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
     gtk_box_pack_start(GTK_BOX(main_box), right_panel, TRUE, TRUE, 0);
     
-    // Search and Sort
-    GtkWidget *search_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
-    gtk_box_pack_start(GTK_BOX(right_panel), search_box, FALSE, FALSE, 0);
-    
-    ui->search_entry = gtk_entry_new();
-    gtk_entry_set_placeholder_text(GTK_ENTRY(ui->search_entry), "Search by car number...");
-    g_signal_connect(ui->search_entry, "changed", G_CALLBACK(on_search_changed), ui);
-    gtk_box_pack_start(GTK_BOX(search_box), ui->search_entry, TRUE, TRUE, 0);
-    
-    GtkWidget *clear_search = gtk_button_new_with_label("Clear");
-    g_signal_connect(clear_search, "clicked", G_CALLBACK(on_clear_search_clicked), ui);
-    gtk_box_pack_start(GTK_BOX(search_box), clear_search, FALSE, FALSE, 0);
-    
-    ui->sort_combo = gtk_combo_box_text_new();
-    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(ui->sort_combo), "Sort by Car Number");
-    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(ui->sort_combo), "Sort by Entry Time");
-    gtk_combo_box_set_active(GTK_COMBO_BOX(ui->sort_combo), 0);
-    g_signal_connect(ui->sort_combo, "changed", G_CALLBACK(on_sort_changed), ui);
-    gtk_box_pack_start(GTK_BOX(search_box), ui->sort_combo, FALSE, FALSE, 0);
-    
-    // Car List
     list_frame = gtk_frame_new("Active Parked Cars");
     gtk_box_pack_start(GTK_BOX(right_panel), list_frame, TRUE, TRUE, 0);
     
@@ -514,7 +370,6 @@ void ui_show_dashboard(UIState *ui) {
     
     gtk_container_add(GTK_CONTAINER(scrolled), ui->car_list_treeview);
     
-    // Buttons
     button_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
     gtk_box_pack_start(GTK_BOX(right_panel), button_box, FALSE, FALSE, 0);
     
@@ -526,15 +381,6 @@ void ui_show_dashboard(UIState *ui) {
     g_signal_connect(load_button, "clicked", G_CALLBACK(on_load_clicked), ui);
     gtk_box_pack_start(GTK_BOX(button_box), load_button, TRUE, TRUE, 0);
     
-    GtkWidget *logout_button = gtk_button_new_with_label("Logout");
-    g_signal_connect(logout_button, "clicked", G_CALLBACK(on_logout_clicked), ui);
-    gtk_box_pack_start(GTK_BOX(button_box), logout_button, TRUE, TRUE, 0);
-    
-    GtkWidget *exit_button2 = gtk_button_new_with_label("Exit App");
-    g_signal_connect(exit_button2, "clicked", G_CALLBACK(on_exit_app_clicked), ui);
-    gtk_box_pack_start(GTK_BOX(button_box), exit_button2, TRUE, TRUE, 0);
-    
-    // Total Revenue
     GtkWidget *revenue_frame = gtk_frame_new("Total Revenue");
     gtk_box_pack_start(GTK_BOX(right_panel), revenue_frame, FALSE, FALSE, 0);
     
@@ -545,7 +391,6 @@ void ui_show_dashboard(UIState *ui) {
     
     ui->dashboard_window = window;
     
-    // Initial updates
     ui_update_car_list(ui);
     ui_update_garage_availability(ui);
     ui_update_revenue(ui);
@@ -557,8 +402,6 @@ void ui_init(UIState *ui, AppState *app_state, GtkApplication *app) {
     memset(ui, 0, sizeof(UIState));
     ui->app_state = app_state;
     ui->app = app;
-    ui->sort_column = 0;
-    ui->sort_order = 0;
     g_ui_state = ui;
 }
 

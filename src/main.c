@@ -1,12 +1,11 @@
 #include <gtk/gtk.h>
 #include "models.h"
-#include "parking.h"
-#include "fileio.h"
-#include "billing.h"
+#include "car_entry_exit.h"
+#include "file_handling.h"
 #include "ui.h"
 
 #ifdef ENABLE_MYSQL
-#include "db.h"
+#include "mysql_integration.h"
 #endif
 
 static AppState app_state;
@@ -39,7 +38,7 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
                                    app_state.active_cars[i].garage_id, -1);
     }
     
-    // Calculate total revenue
+    // Calculate total revenue (using function from car_entry_exit.c)
     app_state.total_revenue = get_total_revenue(app_state.history_cars, app_state.history_count);
     
 #ifdef ENABLE_MYSQL
@@ -51,9 +50,9 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
     }
 #endif
     
-    // Initialize UI
+    // Initialize UI - Show dashboard directly (no login for Suborna's presentation)
     ui_init(&ui_state, &app_state, app);
-    ui_show_login(&ui_state);
+    ui_show_dashboard(&ui_state);
 }
 
 static void on_shutdown(GtkApplication *app, gpointer user_data) {
